@@ -117,4 +117,9 @@ variable "dbvm_osdisk_name" {
 
 variable "dbvm_name" {
 
+
+}
+
+variable "my_ip_address" {
+  description = "Enter your local/laptop ip address: "
 }
