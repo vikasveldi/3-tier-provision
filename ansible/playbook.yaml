@@ -1,0 +1,29 @@
+[webservers]
+# This VM has a Public IP, so we connect directly
+web-vm ansible_host=<public-ip-of-web-vm>
+
+[appservers]
+# This VM only has a Private IP
+app-vm ansible_host=<private-ip-of-app-vm>
+
+[dbservers]
+# This VM only has a Private IP (Using the IP you verified in logs)
+db-vm ansible_host=<private-ip-of-db-vm>
+
+[all:vars]
+# Global variables for authentication
+ansible_user=azadmin
+ansible_password=Password@123
+ansible_become_pass=Password@123
+# Disable host key checking for all servers, Added UserKnownHostsFile=/dev/null to prevent "Remote Host Identification Changed"
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+[private_vms:children]
+appservers
+dbservers
+
+[private_vms:vars]
+# PROXY COMMAND: Jumps from Laptop -> Web VM -> Private VM
+# Uses 'sshpass' to handle the password for the Jump Host (Web VM)
+# Added UserKnownHostsFile=/dev/null to prevent "Remote Host Identification Changed"
+ansible_ssh_common_args=-o ProxyCommand="sshpass -p Password@123 ssh -W %h:%p -q <web-vm-username>@<public-ip-of-web-vm> -o StrictHostKeyChecking=no" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
