@@ -1,29 +1,88 @@
-[webservers]
-# This VM has a Public IP, so we connect directly
-web-vm ansible_host=<public-ip-of-web-vm>
+---
+# ------------------------------------
+# 1. Configure Web Tier (Nginx)
+# ------------------------------------
+- name: Configure Web Server
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
 
-[appservers]
-# This VM only has a Private IP
-app-vm ansible_host=<private-ip-of-app-vm>
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: present
 
-[dbservers]
-# This VM only has a Private IP (Using the IP you verified in logs)
-db-vm ansible_host=<private-ip-of-db-vm>
+    - name: Start and Enable Nginx
+      service:
+        name: nginx
+        state: started
+        enabled: yes
 
-[all:vars]
-# Global variables for authentication
-ansible_user=azadmin
-ansible_password=Password@123
-ansible_become_pass=Password@123
-# Disable host key checking for all servers, Added UserKnownHostsFile=/dev/null to prevent "Remote Host Identification Changed"
-ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+# ------------------------------------
+# 2. Configure App Tier (Tomcat)
+# ------------------------------------
+- name: Configure App Server
+  hosts: appservers
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
 
-[private_vms:children]
-appservers
-dbservers
+    - name: Install Java (Required for Tomcat)
+      apt:
+        name: default-jdk
+        state: present
 
-[private_vms:vars]
-# PROXY COMMAND: Jumps from Laptop -> Web VM -> Private VM
-# Uses 'sshpass' to handle the password for the Jump Host (Web VM)
-# Added UserKnownHostsFile=/dev/null to prevent "Remote Host Identification Changed"
-ansible_ssh_common_args=-o ProxyCommand="sshpass -p Password@123 ssh -W %h:%p -q <web-vm-username>@<public-ip-of-web-vm> -o StrictHostKeyChecking=no" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+    - name: Install Tomcat 9
+      apt:
+        name: tomcat9
+        state: present
+
+    - name: Start and Enable Tomcat
+      service:
+        name: tomcat9
+        state: started
+        enabled: yes
+
+# ------------------------------------
+# 3. Configure DB Tier (MySQL)
+# ------------------------------------
+- name: Configure DB Server
+  hosts: dbservers
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install MySQL Server
+      apt:
+        name: mysql-server
+        state: present
+
+    - name: Start and Enable MySQL
+      service:
+        name: mysql
+        state: started
+        enabled: yes
+
+    - name: Allow remote connections to MySQL
+      # Changes bind-address from 127.0.0.1 to 0.0.0.0 so the App VM can connect
+      lineinfile:
+        path: /etc/mysql/mysql.conf.d/mysqld.cnf
+        regexp: "^bind-address"
+        line: "bind-address = 0.0.0.0"
+      notify: Restart MySQL
+
+  handlers:
+    - name: Restart MySQL
+      service:
+        name: mysql
+        state: restarted
