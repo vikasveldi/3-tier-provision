@@ -11,7 +11,7 @@ resource "azurerm_network_security_group" "webnsg" {
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "22"
-    source_address_prefix      = "<MY-IP-ADDRESS>"
+    source_address_prefix      = var.my_ip_address
     destination_address_prefix = azurerm_subnet.websn.address_prefixes[0]
     description                = "Allow SSH from any source to any destination"
   }
@@ -35,3 +35,4 @@ resource "azurerm_subnet_network_security_group_association" "web_sn_association
   network_security_group_id = azurerm_network_security_group.webnsg.id
 
 }
+
