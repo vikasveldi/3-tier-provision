@@ -24,7 +24,7 @@ resource "azurerm_network_security_group" "dbnsg" {
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "*"
-    source_address_prefix      = "*"
+    source_address_prefix      = azurerm_subnet.websn.address_prefixes[0]
     destination_address_prefix = azurerm_subnet.dbsn.address_prefixes[0]
     description                = "Deny all traffic from Web subnet to DB subnet"
   }
@@ -33,4 +33,5 @@ resource "azurerm_network_security_group" "dbnsg" {
 resource "azurerm_subnet_network_security_group_association" "db_sn_association" {
   subnet_id                 = azurerm_subnet.dbsn.id
   network_security_group_id = azurerm_network_security_group.dbnsg.id
+
 }
